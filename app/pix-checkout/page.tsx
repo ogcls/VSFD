@@ -38,7 +38,7 @@ function PixCheckoutContent() {
 
       try {
         console.log("[v0] Fetching transaction data for ID:", transactionId)
-        const response = await fetch(`/api/podpay/get-transaction?id=${transactionId}`)
+        const response = await fetch(`/api/pix-checkout/get-transaction?id=${transactionId}`)
         const result = await response.json()
 
         if (result.success && result.data) {
@@ -46,14 +46,12 @@ function PixCheckoutContent() {
           setTransaction(result.data)
         } else {
           console.error("[v0] Failed to load transaction data:", result.error)
-          // Fallback for demo purposes
+          // Fallback for demo purposes - removed hardcoded pixPayload
           setTransaction({
             id: transactionId,
             amount: 8.82,
             status: "waiting_payment",
             paymentMethod: "pix",
-            pixPayload:
-              "00020126580014BR.GOV.BCB.PIX013636c4c14c-4b34-4c6c-a4c5-123456789abc5204000053039865802BR5925NOME DO BENEFICIARIO6009SAO PAULO61080540900062070503***6304ABCD",
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           })
@@ -61,14 +59,12 @@ function PixCheckoutContent() {
         }
       } catch (error) {
         console.error("[v0] Error fetching transaction data:", error)
-        // Fallback for demo purposes
+        // Fallback for demo purposes - removed hardcoded pixPayload
         setTransaction({
           id: transactionId || "demo",
           amount: 8.82,
           status: "waiting_payment",
           paymentMethod: "pix",
-          pixPayload:
-            "00020126580014BR.GOV.BCB.PIX013636c4c14c-4b34-4c6c-a4c5-123456789abc5204000053039865802BR5925NOME DO BENEFICIARIO6009SAO PAULO61080540900062070503***6304ABCD",
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         })

@@ -135,10 +135,6 @@ export class PodPayAPI {
             amount: 882, // R$ 8,82 in centavos
             currency: "BRL",
             paymentMethod: "pix",
-            qrCode:
-              "00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-426614174000520400005303986540508.825802BR5913PODPAY DEMO6009SAO PAULO62070503***6304ABCD",
-            pixCode:
-              "00020126580014br.gov.bcb.pix0136123e4567-e12b-12d1-a456-426614174000520400005303986540508.825802BR5913PODPAY DEMO6009SAO PAULO62070503***6304ABCD",
             expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes from now
           },
         }
@@ -175,6 +171,8 @@ export class PodPayAPI {
 
       const result = await response.json()
 
+      console.log("[v0] PodPay getTransaction raw response:", result)
+
       if (!response.ok) {
         return {
           success: false,
@@ -182,9 +180,14 @@ export class PodPayAPI {
         }
       }
 
+      // Extract pixPayload from the response structure
+      if (result.data && result.data.pix && result.data.pix.qrcode) {
+        result.data.pixPayload = result.data.pix.qrcode
+      }
+
       return {
         success: true,
-        data: result,
+        data: result.data || result,
       }
     } catch (error) {
       console.error("[v0] PodPay API Error:", error)
