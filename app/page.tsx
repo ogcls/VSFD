@@ -2099,7 +2099,7 @@ export default function MetaResearchPromotion() {
                 <CardContent className="text-center py-8">
                   <h2 className="text-xl font-semibold text-gray-800 mb-4">{t.thankYou}</h2>
                   <p className="text-gray-600 mb-4">{t.responsesRecorded}</p>
-                  <p className="text-gray-700 mb-6 leading-relaxed">{t.qualifiedText}</p>
+                  
                   <p className="text-green-600 font-semibold text-lg">
                     {t.finalBalance} R$ {balance.toFixed(2)}
                   </p>

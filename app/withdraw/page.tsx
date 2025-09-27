@@ -154,7 +154,7 @@ export default function VTubePlayer() {
               clipRule="evenodd"
             />
           </svg>
-          R$ 495,91
+          R$ 495,40
         </div>
       </div>
 
