@@ -1,11 +1,10 @@
-'use client'
+"use client"
 
-import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Volume2, VolumeX, Play, Pause } from 'lucide-react'
-import Image from 'next/image'
-import { getUTMParams, navigateWithUTM } from '@/lib/utm-manager'
+import { useState, useRef, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Volume2, VolumeX, Play, Pause } from "lucide-react"
+import Image from "next/image"
 
 export default function VTubePlayer() {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -51,8 +50,8 @@ export default function VTubePlayer() {
       }
     }
 
-    video.addEventListener('timeupdate', updateProgress)
-    return () => video.removeEventListener('timeupdate', updateProgress)
+    video.addEventListener("timeupdate", updateProgress)
+    return () => video.removeEventListener("timeupdate", updateProgress)
   }, [])
 
   const safePlay = async (video: HTMLVideoElement) => {
@@ -65,7 +64,7 @@ export default function VTubePlayer() {
         return true
       }
     } catch (error) {
-      console.log('[v0] Video play interrupted:', error)
+      console.log("[v0] Video play interrupted:", error)
       return false
     }
     return false
@@ -104,39 +103,8 @@ export default function VTubePlayer() {
   }
 
   const handleUnlockSaque = async () => {
-    setIsCreatingPixPayment(true)
-    console.log('[v0] Starting PIX payment creation from withdraw page')
-
-    try {
-      const response = await fetch('/api/pix-payment/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          transferId: `withdraw-${Date.now()}`,
-        }),
-      })
-
-      const result = await response.json()
-
-      if (result.success && result.data?.id) {
-        console.log('[v0] PIX transaction created successfully:', result.data)
-        router.push(`/pix-payment?id=${result.data.id}`)
-      } else {
-        console.error('[v0] Error creating PIX transaction:', result)
-        const emergencyId = `emergency-${Date.now()}`
-        console.log('[v0] Using emergency fallback ID:', emergencyId)
-        router.push(`/pix-payment?id=${emergencyId}`)
-      }
-    } catch (error) {
-      console.error('[v0] Error in handleUnlockSaque:', error)
-      const emergencyId = `emergency-${Date.now()}`
-      console.log('[v0] Using emergency fallback ID:', emergencyId)
-      router.push(`/pix-payment?id=${emergencyId}`)
-    } finally {
-      setIsCreatingPixPayment(false)
-    }
+    console.log("[v0] Redirecting to reward page")
+    router.push("/reward")
   }
 
   return (
@@ -276,7 +244,7 @@ export default function VTubePlayer() {
                 Processando...
               </div>
             ) : (
-              'DESBLOQUEAR SAQUE'
+              "DESBLOQUEAR SAQUE"
             )}
           </Button>
         )}
