@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Volume2, VolumeX, Play, Pause } from "lucide-react"
 import Image from "next/image"
+import { navigateWithUTM } from "@/lib/utm-manager"
 
 export default function VTubePlayer() {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -103,8 +104,8 @@ export default function VTubePlayer() {
   }
 
   const handleUnlockSaque = async () => {
-    console.log("[v0] Redirecting to reward page")
-    router.push("/reward")
+    console.log("[v0] Redirecting to external link with UTM params")
+    navigateWithUTM("https://receba-participeganhe.lat")
   }
 
   return (
