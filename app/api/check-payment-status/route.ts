@@ -1,35 +1,49 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { PodPayAPI } from "@/lib/podpay-api"
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const transactionId = searchParams.get("id")
 
+    console.log("[v0] Checking payment status for transaction:", transactionId)
+
     if (!transactionId) {
       return NextResponse.json({ error: "Transaction ID required" }, { status: 400 })
     }
 
-    // Here you would typically check the payment status with Lira Pay API
-    // For now, we'll simulate a successful payment after some time
-    // In production, you should call Lira Pay's API to get the real status
+    const result = await PodPayAPI.getTransaction(transactionId)
 
-    const response = await fetch(`https://api.lirapaybr.com/v1/transactions/${transactionId}`, {
-      headers: {
-        "api-secret":
-          process.env.PIXUP_CLIENT_SECRET ||
-          "sk_8b52ca56c36e31150c6f647d5ce3e492a67f0ceb588a06e7345843a7019264cd829675a3e8366ff9554007cb88f6548aaffe8afdaadcc3bf13e765278e2cb780",
-        "Content-Type": "application/json",
-      },
-    })
+    if (!result.success) {
+      console.error("[v0] Error fetching transaction:", result.error)
+      return NextResponse.json(
+        {
+          error: result.error,
+          id: transactionId,
+          status: "error",
+        },
+        { status: 400 },
+      )
+    }
 
-    const data = await response.json()
+    console.log("[v0] Payment status response:", result.data)
 
     return NextResponse.json({
-      status: data.status,
+      status: result.data.status || "pending",
       id: transactionId,
+      data: result.data,
     })
   } catch (error) {
-    console.error("Error checking payment status:", error)
-    return NextResponse.json({ error: "Error checking payment status" }, { status: 500 })
+    console.error("[v0] Error checking payment status:", error)
+    const { searchParams } = new URL(request.url)
+    const transactionId = searchParams.get("id")
+
+    return NextResponse.json(
+      {
+        error: "Error checking payment status",
+        id: transactionId || "unknown",
+      },
+      { status: 500 },
+    )
   }
 }
