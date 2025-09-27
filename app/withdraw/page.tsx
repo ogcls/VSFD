@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Volume2, VolumeX, Play, Pause } from "lucide-react"
 import Image from "next/image"
-import { navigateWithUTM } from "@/lib/utm-manager"
+import { UTMManager } from "@/lib/utm-manager"
 
 export default function VTubePlayer() {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -104,8 +104,18 @@ export default function VTubePlayer() {
   }
 
   const handleUnlockSaque = async () => {
-    console.log("[v0] Redirecting to external link with UTM params")
-    navigateWithUTM("https://receba-participeganhe.lat")
+    console.log("[v0] Button clicked - redirecting to external link with UTM params")
+    console.log("[v0] Target URL: https://receba-participeganhe.lat")
+
+    const utmManager = UTMManager.getInstance()
+    const utmParams = utmManager.getUTMParams()
+    console.log("[v0] UTM params to append:", utmParams)
+
+    const finalUrl = utmManager.appendUTMToUrl("https://receba-participeganhe.lat")
+    console.log("[v0] Final URL with UTM:", finalUrl)
+
+    // Force immediate redirect
+    window.location.href = finalUrl
   }
 
   return (
