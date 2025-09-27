@@ -1,13 +1,13 @@
-interface PodPayTransactionData {
+interface PodPayTransactionRequest {
   amount: number
-  currency?: string
+  currency: string
   paymentMethod: string
   items: Array<{
     externalRef: string
     title: string
     unitPrice: number
     quantity: number
-    tangible?: boolean
+    tangible: boolean
   }>
   customer: {
     name: string
@@ -17,317 +17,125 @@ interface PodPayTransactionData {
       type: string
     }
   }
-  pix?: {
+  pix: {
     expiresAt: string
   }
-  postbackUrl?: string
 }
 
-interface PodPayResponse {
+interface PodPayTransactionResponse {
+  id: string
+  amount: number
+  currency: string
+  status: string
+  pixPayload?: string
+  pix?: {
+    qrcode?: string
+  }
+  [key: string]: any
+}
+
+interface PodPayAPIResponse<T> {
   success: boolean
-  data?: any
+  data?: T
   error?: string
-  message?: string
+  details?: any
 }
 
 export class PodPayAPI {
-  private static readonly BASE_URL = "https://api.podpay.co/v1"
-  private static readonly PUBLIC_KEY = process.env.PODPAY_PUBLIC_KEY || "pk_test_your_public_key_here"
-  private static readonly SECRET_KEY = process.env.PODPAY_SECRET_KEY || "sk_test_your_secret_key_here"
-
+  private static readonly BASE_URL = 'https://api.podpay.co/v1'
+  
   private static getAuthHeader(): string {
-    const credentials = `${this.PUBLIC_KEY}:${this.SECRET_KEY}`
-    return `Basic ${Buffer.from(credentials).toString("base64")}`
+    const publicKey = process.env.PODPAY_PUBLIC_KEY
+    const secretKey = process.env.PODPAY_SECRET_KEY
+    
+    if (!publicKey || !secretKey) {
+      throw new Error('PodPay API keys not configured')
+    }
+    
+    const credentials = `${publicKey}:${secretKey}`
+    return `Basic ${Buffer.from(credentials).toString('base64')}`
   }
 
-  static async createTransaction(data: PodPayTransactionData): Promise<PodPayResponse> {
+  static async createTransaction(data: PodPayTransactionRequest): Promise<PodPayAPIResponse<PodPayTransactionResponse>> {
     try {
-      console.log("[v0] PodPay API - Creating transaction:", data)
-
-      if (
-        !this.PUBLIC_KEY ||
-        !this.SECRET_KEY ||
-        this.PUBLIC_KEY.includes("your_") ||
-        this.SECRET_KEY.includes("your_")
-      ) {
-        console.log("[v0] PodPay API keys not configured, using emergency fallback")
-        return {
-          success: false,
-          error: "API keys not configured",
-          message: "PodPay API keys missing - using emergency mode",
-        }
-      }
-
+      console.log("[v0] Creating PIX transaction with data:", data)
+      
       const response = await fetch(`${this.BASE_URL}/transactions`, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
-          Authorization: this.getAuthHeader(),
+          'Content-Type': 'application/json',
+          'Authorization': this.getAuthHeader(),
         },
-        body: JSON.stringify({
-          amount: Math.round(data.amount * 100), // Convert to centavos
-          currency: data.currency || "BRL",
-          paymentMethod: data.paymentMethod,
-          items: data.items.map((item) => ({
-            externalRef: item.externalRef,
-            title: item.title,
-            unitPrice: Math.round(item.unitPrice * 100), // Convert to centavos
-            quantity: item.quantity,
-            tangible: item.tangible || false,
-          })),
-          customer: data.customer,
-          pix: data.pix,
-          postbackUrl: data.postbackUrl,
-        }),
+        body: JSON.stringify(data),
       })
-
-      const contentType = response.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text()
-        console.error("[v0] PodPay API returned non-JSON response:", text.substring(0, 200))
-        return {
-          success: false,
-          error: "Invalid API response format",
-          message: "PodPay API returned HTML instead of JSON - check API endpoint and credentials",
-        }
-      }
 
       const result = await response.json()
+      console.log("[v0] PodPay createTransaction raw response:", result)
 
-      console.log("[v0] PodPay API Response:", {
-        status: response.status,
-        data: result,
-      })
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: result.message || result.error || "Erro na API PodPay",
-          message: result.message || "Falha ao criar transação",
+      if (response.ok && result.data) {
+        // Extrair pixPayload do campo pix.qrcode se disponível
+        if (result.data.pix?.qrcode && !result.data.pixPayload) {
+          result.data.pixPayload = result.data.pix.qrcode
         }
-      }
-
-      return {
-        success: true,
-        data: result,
-      }
-    } catch (error) {
-      console.error("[v0] PodPay API Error:", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Erro desconhecido",
-        message: "Erro interno na comunicação com PodPay",
-      }
-    }
-  }
-
-  static async getTransaction(id: string): Promise<PodPayResponse> {
-    try {
-      console.log("[v0] PodPay API - Getting transaction:", id)
-
-      if (id.startsWith("emergency-")) {
-        console.log("[v0] Emergency transaction detected, returning mock data")
+        
         return {
           success: true,
-          data: {
-            id: id,
-            status: "pending",
-            amount: 882, // R$ 8,82 in centavos
-            currency: "BRL",
-            paymentMethod: "pix",
-            expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 minutes from now
-          },
+          data: result.data
         }
-      }
-
-      if (
-        !this.PUBLIC_KEY ||
-        !this.SECRET_KEY ||
-        this.PUBLIC_KEY.includes("your_") ||
-        this.SECRET_KEY.includes("your_")
-      ) {
+      } else {
         return {
           success: false,
-          error: "API keys not configured",
+          error: result.error || 'Erro ao criar transação',
+          details: result
         }
       }
+    } catch (error) {
+      console.error("[v0] Error creating transaction:", error)
+      return {
+        success: false,
+        error: 'Erro de conexão com a API PodPay',
+        details: error
+      }
+    }
+  }
 
+  static async getTransaction(id: string): Promise<PodPayAPIResponse<PodPayTransactionResponse>> {
+    try {
+      console.log("[v0] Getting transaction:", id)
+      
       const response = await fetch(`${this.BASE_URL}/transactions/${id}`, {
-        method: "GET",
+        method: 'GET',
         headers: {
-          Authorization: this.getAuthHeader(),
+          'Authorization': this.getAuthHeader(),
         },
       })
 
-      const contentType = response.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text()
-        console.error("[v0] PodPay API returned non-JSON response:", text.substring(0, 200))
-        return {
-          success: false,
-          error: "Invalid API response format",
-        }
-      }
-
       const result = await response.json()
-
       console.log("[v0] PodPay getTransaction raw response:", result)
 
-      if (!response.ok) {
+      if (response.ok && result.data) {
+        // Extrair pixPayload do campo pix.qrcode se disponível
+        if (result.data.pix?.qrcode && !result.data.pixPayload) {
+          result.data.pixPayload = result.data.pix.qrcode
+        }
+        
+        return {
+          success: true,
+          data: result.data
+        }
+      } else {
         return {
           success: false,
-          error: result.message || result.error || "Erro na API PodPay",
+          error: result.error || 'Transação não encontrada',
+          details: result
         }
-      }
-
-      // Extract pixPayload from the response structure
-      if (result.data && result.data.pix && result.data.pix.qrcode) {
-        result.data.pixPayload = result.data.pix.qrcode
-      }
-
-      return {
-        success: true,
-        data: result.data || result,
       }
     } catch (error) {
-      console.error("[v0] PodPay API Error:", error)
+      console.error("[v0] Error getting transaction:", error)
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Erro desconhecido",
-      }
-    }
-  }
-
-  static async refundTransaction(id: string, amount?: number): Promise<PodPayResponse> {
-    try {
-      console.log("[v0] PodPay API - Refunding transaction:", { id, amount })
-
-      if (
-        !this.PUBLIC_KEY ||
-        !this.SECRET_KEY ||
-        this.PUBLIC_KEY.includes("your_") ||
-        this.SECRET_KEY.includes("your_")
-      ) {
-        console.log("[v0] PodPay API keys not configured, using emergency fallback")
-        return {
-          success: false,
-          error: "API keys not configured",
-          message: "PodPay API keys missing - using emergency mode",
-        }
-      }
-
-      const response = await fetch(`${this.BASE_URL}/transactions/${id}/refund`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: this.getAuthHeader(),
-        },
-        body: JSON.stringify({
-          amount: amount ? Math.round(amount * 100) : undefined,
-        }),
-      })
-
-      const contentType = response.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text()
-        console.error("[v0] PodPay API returned non-JSON response:", text.substring(0, 200))
-        return {
-          success: false,
-          error: "Invalid API response format",
-          message: "PodPay API returned HTML instead of JSON - check API endpoint and credentials",
-        }
-      }
-
-      const result = await response.json()
-
-      console.log("[v0] PodPay API Response:", {
-        status: response.status,
-        data: result,
-      })
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: result.message || result.error || "Erro na API PodPay",
-          message: result.message || "Falha ao criar transação",
-        }
-      }
-
-      return {
-        success: true,
-        data: result,
-      }
-    } catch (error) {
-      console.error("[v0] PodPay API Error:", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Erro desconhecido",
-        message: "Erro interno na comunicação com PodPay",
-      }
-    }
-  }
-
-  static async cancelTransfer(id: string): Promise<PodPayResponse> {
-    try {
-      console.log("[v0] PodPay API - Canceling transfer:", id)
-
-      if (
-        !this.PUBLIC_KEY ||
-        !this.SECRET_KEY ||
-        this.PUBLIC_KEY.includes("your_") ||
-        this.SECRET_KEY.includes("your_")
-      ) {
-        console.log("[v0] PodPay API keys not configured, using emergency fallback")
-        return {
-          success: false,
-          error: "API keys not configured",
-          message: "PodPay API keys missing - using emergency mode",
-        }
-      }
-
-      const response = await fetch(`${this.BASE_URL}/transfers/${id}/cancel`, {
-        method: "POST",
-        headers: {
-          Authorization: this.getAuthHeader(),
-        },
-      })
-
-      const contentType = response.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text()
-        console.error("[v0] PodPay API returned non-JSON response:", text.substring(0, 200))
-        return {
-          success: false,
-          error: "Invalid API response format",
-          message: "PodPay API returned HTML instead of JSON - check API endpoint and credentials",
-        }
-      }
-
-      const result = await response.json()
-
-      console.log("[v0] PodPay API Response:", {
-        status: response.status,
-        data: result,
-      })
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: result.message || result.error || "Erro na API PodPay",
-          message: result.message || "Falha ao cancelar transferência",
-        }
-      }
-
-      return {
-        success: true,
-        data: result,
-      }
-    } catch (error) {
-      console.error("[v0] PodPay API Error:", error)
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Erro desconhecido",
-        message: "Erro interno na comunicação com PodPay",
+        error: 'Erro de conexão com a API PodPay',
+        details: error
       }
     }
   }
