@@ -42,7 +42,7 @@ export default function PixPaymentPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          amount: 8.82,
+          amount: 882,
           description: "Pagamento PIX - ADSREWARD",
           customer_name: "Cliente ADSREWARD",
           customer_email: "cliente@adsreward.com",
