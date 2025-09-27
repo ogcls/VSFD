@@ -340,7 +340,7 @@ export default function MetaResearchPromotion() {
           question:
             "Você já encontrou erros ou falhas (bugs) na plataforma que prejudicaram sua navegação ou experiência no Instagram?",
           options: [
-            "Nunca noteei nenhum bug",
+            "Nunca notei nenhum bug",
             "Sim, mas não atrapalhou muito",
             "Sim, atrapalhou bastante minha navegação",
             "Sim, cheguei a desistir de usar a plataforma por causa disso",
