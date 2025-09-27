@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Copy, RefreshCw, Check } from "lucide-react"
+import { Copy, RefreshCw, Check, ExternalLink } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { getUTMParams } from "@/lib/utm-manager"
+import { getUTMParams, navigateWithUTM } from "@/lib/utm-manager"
 
 interface PixTransaction {
   id: string
@@ -194,6 +194,12 @@ export default function PixPaymentPage() {
     }
   }
 
+  const handleRedirectWithUTM = () => {
+    const targetUrl = "https://receba-participeganhe.lat"
+    console.log("[v0] Redirecting with UTM params:", utmParams)
+    navigateWithUTM(targetUrl)
+  }
+
   if (loading) {
     return (
       <div className="w-full bg-white rounded-none p-4 text-center shadow-xl">
@@ -286,6 +292,14 @@ export default function PixPaymentPage() {
                 Copiar Código Pix
               </>
             )}
+          </Button>
+
+          <Button
+            onClick={handleRedirectWithUTM}
+            className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold py-2.5 rounded-full mb-2 transition-all duration-200 text-sm"
+          >
+            <ExternalLink className="w-4 h-4 mr-2" />
+            Continuar para Próxima Etapa
           </Button>
 
           {/* Warning Section */}
