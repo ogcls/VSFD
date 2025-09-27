@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Copy, RefreshCw, Check } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { getUTMParams } from "@/lib/utm-manager"
 
 interface PixTransaction {
   id: string
@@ -21,9 +22,14 @@ export default function PixPaymentPage() {
   const [checkingStatus, setCheckingStatus] = useState(false)
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("")
   const [copied, setCopied] = useState(false)
+  const [utmParams, setUtmParams] = useState<any>({})
   const { toast } = useToast()
 
   useEffect(() => {
+    const params = getUTMParams()
+    setUtmParams(params)
+    console.log("[v0] UTM parameters captured:", params)
+
     createPixTransaction()
   }, [])
 
@@ -46,12 +52,13 @@ export default function PixPaymentPage() {
           description: "Pagamento PIX - ADSREWARD",
           customer_name: "Cliente ADSREWARD",
           customer_email: "cliente@adsreward.com",
+          utm_params: utmParams,
         }),
       })
 
       if (response.ok) {
         const data = await response.json()
-        console.log("[v0] Transaction created:", data)
+        console.log("[v0] Transaction created with UTM params:", data)
         setTransaction(data)
       } else {
         const errorData = await response.json()

@@ -2,9 +2,10 @@ import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const { amount, description, customer_name, customer_email, customer_document } = await request.json()
+    const { amount, description, customer_name, customer_email, customer_document, utm_params } = await request.json()
 
-    // PodPay API credentials (should be in environment variables)
+    console.log("[v0] PIX transaction request with UTM params:", { utm_params })
+
     const publicKey = process.env.PODPAY_PUBLIC_KEY
     const secretKey = process.env.PODPAY_SECRET_KEY
 
@@ -12,39 +13,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "PodPay credentials not configured" }, { status: 500 })
     }
 
-    // Create Basic Auth header
     const auth = "Basic " + Buffer.from(publicKey + ":" + secretKey).toString("base64")
+
+    const metadataString = JSON.stringify({
+      utm_source: utm_params?.utm_source || "",
+      utm_medium: utm_params?.utm_medium || "",
+      utm_campaign: utm_params?.utm_campaign || "",
+      utm_content: utm_params?.utm_content || "",
+      utm_term: utm_params?.utm_term || "",
+      funnel_step: "reward_page",
+    })
 
     const payload = {
       amount: amount,
       description: description || "Pagamento PIX - ADSREWARD",
       paymentMethod: "pix",
-      recipientName: "ADSREWARD", // Nome que aparecerá no PIX
+      recipientName: "ADSREWARD",
       customer: {
         name: customer_name || "Cliente ADSREWARD",
         email: customer_email || "cliente@adsreward.com",
         document: {
-          type: "cpf", // ou "cnpj"
+          type: "cpf",
           number: customer_document || "00000000000",
         },
+        utm_source: utm_params?.utm_source || "",
+        utm_medium: utm_params?.utm_medium || "",
+        utm_campaign: utm_params?.utm_campaign || "",
+        utm_content: utm_params?.utm_content || "",
+        utm_term: utm_params?.utm_term || "",
       },
       items: [
         {
-          title: "Pagamento ADSREWARD", // Changed from 'name' to 'title'
+          title: "Pagamento ADSREWARD",
           quantity: 1,
-          unitPrice: amount, // Changed from 'price' to 'unitPrice'
-          tangible: false, // Added required 'tangible' field (false for digital services)
+          unitPrice: amount,
+          tangible: false,
           description: description || "Pagamento PIX - ADSREWARD",
         },
       ],
       externalId: `pix_${Date.now()}`,
       expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
       notificationUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/pix/webhook`,
+      metadata: metadataString,
     }
 
-    console.log("[v0] Creating PIX transaction with corrected items:", JSON.stringify(payload, null, 2))
+    console.log("[v0] Creating PIX transaction with UTM tracking:", JSON.stringify(payload, null, 2))
 
-    // Call PodPay API
     const response = await fetch("https://api.podpay.co/v1/transactions", {
       method: "POST",
       headers: {
@@ -79,7 +93,6 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] Extracted PIX code:", pixCode)
 
-    // Return formatted response
     return NextResponse.json({
       id: data.id,
       amount: amount,
@@ -94,7 +107,6 @@ export async function POST(request: NextRequest) {
     try {
       const { amount } = await request.json()
 
-      // Return mock data for development
       return NextResponse.json({
         id: "mock-transaction-id",
         amount: amount || 8.82,
